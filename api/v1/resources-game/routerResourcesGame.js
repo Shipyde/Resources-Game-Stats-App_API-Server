@@ -18,6 +18,12 @@ routerResourcesGame.get('/recovery/:UUID/:TOKEN', function(req, res){
     });
 });
 
+routerResourcesGame.delete('/recovery/:UUID/:TOKEN', function(req, res){
+    res.json({
+        msg: 'Please continue the deletion process in the email sent to you.'
+    })
+})
+
 // SPEICHERT DIE DATEN AUS DER APP AB
 routerResourcesGame.post('/recovery', function(req, res){
     res.json({
