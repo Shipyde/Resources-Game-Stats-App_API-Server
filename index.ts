@@ -1,20 +1,23 @@
-const express = require('express')
+import express, { Express, Request, Response } from "express";
+import dotenv from "dotenv";
+
+dotenv.config();
 var path = require('path');
 var cookieParser = require('cookie-parser');
-const app = express()
-const port = 3000
+const app: Express = express();
+const port = process.env.PORT;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const routerv1 = require('./api/v1/routerv1.js')
-app.use('/v1', routerv1);
+const v1 = require('./api/v1/routerv1.ts');
+app.use('/v1', v1);
 
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-})
+app.get('/', (req: Request, res: Response) => {
+  res.send('Hello World!');
+});
 
 
 // catch 404 and forward to error handler
@@ -31,7 +34,7 @@ app.get('/', (req, res) => {
 
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
-})
+  console.log(`Example app listening on port ${port}`);
+});
 
 module.exports = app;

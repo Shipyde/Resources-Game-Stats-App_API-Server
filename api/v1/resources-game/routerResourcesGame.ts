@@ -1,8 +1,9 @@
-const express = require('express');
-const routerResourcesGame = express.Router();
+import express, { Router, Request, Response } from "express";
+
+const routerResourcesGame: Router = express.Router();
 
 // RUFT DIE AKTION AUF DAMIT EINE EMAIL MIT EINEN EINMAL TOKEN GESENDET WIRD
-routerResourcesGame.get('/recovery/:UUID', function(req, res){
+routerResourcesGame.get('/recovery/:UUID', function(req: Request, res: Response){
     res.json({
         msg: 'ok',
         UUID: req.params.UUID
@@ -11,7 +12,7 @@ routerResourcesGame.get('/recovery/:UUID', function(req, res){
 
 // RUF DIE AKTION AUF DAMIT EINE EMAIL MIT EINEM EINMAL TOKEN ZUM 
 // LÖSCHEN DER HINTERLEGTEN DATENSÄTZE GESENDET WIRD
-routerResourcesGame.delete('/recovery/:UUID/', function(req, res){
+routerResourcesGame.delete('/recovery/:UUID/', function(req:Request, res:Response){
     res.json({
         msg: 'Please continue the deletion process in the email sent to you.'
     })
@@ -19,7 +20,7 @@ routerResourcesGame.delete('/recovery/:UUID/', function(req, res){
 
 // GIBT EINMALIG DIE ZUR UUID IN DER DATENBANK GESPEICHERTEN DATEN ZURÜCK 
 // ODER BESTÄTIGT DAS LÖSCHEN EINES GESPEICHERTEN DATENSATZES
-routerResourcesGame.get('/recovery/:UUID/:TOKEN', function(req, res){
+routerResourcesGame.get('/recovery/:UUID/:TOKEN', function(req:Request, res:Response){
     res.json({
         msg: 'ok',
         UUID: req.params.UUID,
@@ -28,7 +29,7 @@ routerResourcesGame.get('/recovery/:UUID/:TOKEN', function(req, res){
 });
 
 // SPEICHERT DIE DATEN AUS DER APP AB
-routerResourcesGame.post('/recovery', function(req, res){
+routerResourcesGame.post('/recovery', function(req:Request, res:Response){
     res.json({
         msg: 'ok'
     });
@@ -36,7 +37,7 @@ routerResourcesGame.post('/recovery', function(req, res){
 
 
 // HOLT MARKTDATEN AUS DATENBANK
-routerResourcesGame.get('/data', function(req, res){
+routerResourcesGame.get('/data', function(req:Request, res:Response){
     res.json({
         msg: 'ok'
     });

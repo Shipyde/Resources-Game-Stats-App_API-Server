@@ -1,8 +1,9 @@
-const express = require('express');
-const routerv1 = express.Router();
+import express, { Router, Request, Response } from "express";
 
-const routerResourcesGame = require('./resources-game/routerResourcesGame.js');
-routerv1.use('/resources-game', routerResourcesGame);
+const routerv1: Router = express.Router();
+
+const resourcesGame = require('./resources-game/routerResourcesGame.ts');
+routerv1.use('/resources-game', resourcesGame);
 
 module.exports = routerv1;
 /*
