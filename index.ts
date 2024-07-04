@@ -12,7 +12,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const v1 = require('./api/v1/routerv1.ts');
+const v1 = require('./api/v1/routerv1');
 app.use('/v1', v1);
 
 app.get('/', (req: Request, res: Response) => {

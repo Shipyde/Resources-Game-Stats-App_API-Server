@@ -2,7 +2,7 @@ import express, { Router, Request, Response } from "express";
 
 const routerv1: Router = express.Router();
 
-const resourcesGame = require('./resources-game/routerResourcesGame.ts');
+const resourcesGame = require('./resources-game/routerResourcesGame');
 routerv1.use('/resources-game', resourcesGame);
 
 module.exports = routerv1;
