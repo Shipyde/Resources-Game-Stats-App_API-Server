@@ -26,6 +26,10 @@ export const mongooseClient = async () => {
 };
 
 export async function mongooseClientDisconnect() {
-  const disconnect = await mongoose.disconnect();
-  console.log(`MongoDB Disconnected from: ${disconnect}`);
+  await mongoose.disconnect();
+  if (mongoose.connection.readyState === 0) {
+    console.log("MongoDB successfully disconnected");
+  } else {
+    console.log("Error by disconnecting from MongoDB");
+  }
 }
