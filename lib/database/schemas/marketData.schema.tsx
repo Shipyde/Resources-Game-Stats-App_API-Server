@@ -8,7 +8,7 @@ export const MarktDataSchema = new Schema(
           type: Number,
           required: true,
         },
-        KIPrice: {
+        KIprice: {
           type: Number,
           required: true,
         },
@@ -22,7 +22,7 @@ export const MarktDataSchema = new Schema(
         },
       },
     ],
-    createAt: {
+    createdAt: {
       type: Date,
       required: true,
     },
