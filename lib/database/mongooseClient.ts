@@ -1,4 +1,4 @@
-import MarktDataSchema from "@/lib/database/schemas/marktData.schema";
+import MarketDataSchema from "@/lib/database/schemas/marketData.schema";
 import TokenSchema from "@/lib/database/schemas/token.schema";
 import UserDataSchema from "@/lib/database/schemas/userData.schema";
 import mongoose from "mongoose";
@@ -13,14 +13,15 @@ export const mongooseClient = async () => {
 
   const UserData =
     mongoose.models.UserData || mongoose.model("UserData", UserDataSchema);
-  const MarktData =
-    mongoose.models.MarktData || mongoose.model("MarktData", MarktDataSchema);
+  const MarketData =
+    mongoose.models.MarkeetData ||
+    mongoose.model("MarketData", MarketDataSchema);
   const Token = mongoose.models.Token || mongoose.model("Token", TokenSchema);
 
   return {
     client,
     UserData,
-    MarktData,
+    MarketData,
     Token,
   };
 };

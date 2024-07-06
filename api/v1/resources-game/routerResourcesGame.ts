@@ -3,6 +3,7 @@ import {
   mongooseClient,
   mongooseClientDisconnect,
 } from "@/lib/database/mongooseClient";
+import { IMarketData } from "@/lib/Interfaces/IMarketData.interfaces";
 
 const routerResourcesGame: Router = express.Router();
 
@@ -50,10 +51,10 @@ routerResourcesGame.post("/recovery", function (req: Request, res: Response) {
 
 // HOLT MARKTDATEN AUS DATENBANK
 routerResourcesGame.get("/data", async function (req: Request, res: Response) {
-  const { MarktData } = await mongooseClient();
+  const { MarketData } = await mongooseClient();
 
   try {
-    const data = await MarktData.findOne()
+    let data = await MarketData.findOne()
       .sort({ createdAt: -1 })
       .then((feedback) => feedback);
 
@@ -64,9 +65,7 @@ routerResourcesGame.get("/data", async function (req: Request, res: Response) {
         msg: "No market data found",
       });
     } else {
-      res.json({
-        data: data,
-      });
+      res.json(data);
     }
   } catch (error) {
     res.json({
