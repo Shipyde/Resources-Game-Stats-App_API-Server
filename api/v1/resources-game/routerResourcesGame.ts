@@ -54,9 +54,47 @@ routerResourcesGame.get("/data", async function (req: Request, res: Response) {
   const { MarketData } = await mongooseClient();
 
   try {
-    let data = await MarketData.findOne()
+    let data = await MarketData.findOne({}, { _id: 0 })
       .sort({ createdAt: -1 })
       .then((feedback) => feedback);
+
+    if (!data || data.createdAt < new Date().getTime() - 1000 * 60 * 5) {
+      // Get data from API
+      const response = await fetch(
+        "https://resources-game.ch/resapi/?q=1006&f=1&k=" +
+          process.env.API_RESOURCES_TOKEN +
+          "&l=en&d=30"
+      );
+
+      // Save data to database
+      const ResourcesData = await response.json();
+      let insertMarketData: IMarketData = {
+        marketData: [],
+        createdAt: new Date(),
+      };
+
+      ResourcesData.map(
+        (item: {
+          itemID: number;
+          itemName: string;
+          KIprice: number;
+          price: number;
+          unixts: number;
+        }) =>
+          insertMarketData.marketData.push({
+            itemID: item.itemID,
+            KIprice: item.KIprice,
+            price: item.price,
+            unixts: item.unixts,
+          })
+      );
+
+      console.log(insertMarketData);
+
+      await MarketData.create(insertMarketData);
+      data = insertMarketData;
+      // Return data
+    }
 
     const disconnect = await mongooseClientDisconnect();
 
@@ -68,6 +106,15 @@ routerResourcesGame.get("/data", async function (req: Request, res: Response) {
       res.json(data);
     }
   } catch (error) {
+    console.error(
+      '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/data" #### \n\n\n' +
+        "Timestamp: " +
+        new Date().toString() +
+        "\n\nError Message: " +
+        error +
+        "\n\n\n####  ERROR END  ####\n\n"
+    );
+
     res.json({
       msg: "Error by getting market data",
     });

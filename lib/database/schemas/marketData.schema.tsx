@@ -20,6 +20,7 @@ export const MarktDataSchema = new Schema(
           type: Number,
           required: true,
         },
+        _id: false,
       },
     ],
     createdAt: {
@@ -27,7 +28,7 @@ export const MarktDataSchema = new Schema(
       required: true,
     },
   },
-  { _id: true }
+  { _id: true, versionKey: false }
 );
 
 export default MarktDataSchema;
