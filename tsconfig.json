@@ -110,8 +110,9 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
-    "lib/database/mongooseClient.ts",
-    "lib/database/schemas/*.schema.tsx"
+    "**/*.*.ts",
+    "**/*.*.tsx",
+    "lib/database/mongooseClient.ts"
   ],
   "exclude": ["node_modules"]
 }
