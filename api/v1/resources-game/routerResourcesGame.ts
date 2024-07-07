@@ -1,4 +1,7 @@
 import express, { Router, Request, Response } from "express";
+import { v4 as uuidv4 } from "uuid";
+import jwt from "jsonwebtoken";
+import * as EmailValidator from "email-validator";
 import {
   mongooseClient,
   mongooseClientDisconnect,
@@ -43,17 +46,75 @@ routerResourcesGame.get(
 );
 
 // SPEICHERT DIE DATEN AUS DER APP AB
-routerResourcesGame.post("/recovery", function (req: Request, res: Response) {
-  res.json({
-    msg: "ok",
-  });
-});
+routerResourcesGame.post(
+  "/recovery",
+  async function (req: Request, res: Response) {
+    const userID = uuidv4();
+    const { email, userData } = req.body;
+
+    if (email && userData) {
+      if (!EmailValidator.validate(email)) {
+        res.json({
+          msg: "Please provide a valid email address",
+        });
+        return;
+      }
+
+      try {
+        const { UserData } = await mongooseClient();
+        const insertUserData = {
+          uuid: userID,
+          email: email,
+          userData: userData,
+          createdAt: new Date(),
+        };
+        await UserData.create(insertUserData);
+        const disconnect = await mongooseClientDisconnect();
+
+        const { JWT_SECRET_KEY } = process.env;
+
+        if (JWT_SECRET_KEY) {
+          const token = jwt.sign(insertUserData, JWT_SECRET_KEY, {
+            expiresIn: "90d",
+          });
+
+          res.json({
+            YOUR_RECOVERY_KEY: userID,
+            SESSION_TOKEN: token,
+            SESSION_TOKEN_EXPIRES: new Date(
+              Date.now() + 1000 * 60 * 60 * 24 * 90 - 10000
+            ),
+          });
+        } else {
+          throw new Error("JWT_SECRET_KEY not found in .env file");
+        }
+      } catch (error) {
+        console.error(
+          '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+            "Timestamp: " +
+            new Date().toString() +
+            "\n\nError Message: " +
+            error +
+            "\n\n\n####  ERROR END  ####\n\n"
+        );
+
+        res.json({
+          msg: "Error by saving data",
+        });
+      }
+    } else {
+      res.json({
+        msg: "Please provide email and userdata",
+      });
+    }
+  }
+);
 
 // HOLT MARKTDATEN AUS DATENBANK
 routerResourcesGame.get("/data", async function (req: Request, res: Response) {
-  const { MarketData } = await mongooseClient();
-
   try {
+    const { MarketData } = await mongooseClient();
+
     let data = await MarketData.findOne({}, { _id: 0 })
       .sort({ createdAt: -1 })
       .then((feedback) => feedback);
