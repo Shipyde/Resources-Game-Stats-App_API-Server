@@ -10,7 +10,7 @@ export const UserDataSchema = new Schema(
       type: String,
       required: true,
     },
-    userdata: [
+    userData: [
       {
         itemID: {
           type: Number,
@@ -20,15 +20,17 @@ export const UserDataSchema = new Schema(
           type: Number,
           require: true,
         },
+        strike: Boolean,
+        _id: false,
       },
     ],
-    UpdateAt: Date,
-    createAt: {
+    updatedAt: Date,
+    createdAt: {
       type: Date,
       required: true,
     },
   },
-  { _id: true }
+  { _id: true, versionKey: false }
 );
 
 export default UserDataSchema;
