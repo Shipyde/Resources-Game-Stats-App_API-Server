@@ -89,8 +89,6 @@ routerResourcesGame.get("/data", async function (req: Request, res: Response) {
           })
       );
 
-      console.log(insertMarketData);
-
       await MarketData.create(insertMarketData);
       data = insertMarketData;
       // Return data
