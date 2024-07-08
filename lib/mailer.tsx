@@ -6,25 +6,45 @@ interface IEmailPayload {
   html: string;
 }
 
-const smtpOptions = {
-  host: process.env.EMAIL_SERVER_HOST,
-  port: 587,
-  auth: {
-    user: process.env.EMAIL_SERVER_USER,
-    pass: process.env.EMAIL_SERVER_PASSWORD,
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-};
-
 export const sendEmail = async (data: IEmailPayload) => {
-  const transporter = nodemailer.createTransport(smtpOptions);
+  const {
+    EMAIL_SERVER_HOST,
+    EMAIL_SERVER_PORT,
+    EMAIL_SERVER_USER,
+    EMAIL_SERVER_PASSWORD,
+    EMAIL_SERVER_FROM,
+  } = process.env;
 
-  return transporter.sendMail({
-    from: process.env.EMAIL_FROM,
-    ...data,
-  });
+  if (
+    EMAIL_SERVER_FROM &&
+    EMAIL_SERVER_HOST &&
+    EMAIL_SERVER_PORT &&
+    EMAIL_SERVER_USER &&
+    EMAIL_SERVER_PASSWORD
+  ) {
+    const smtpOptions = {
+      host: EMAIL_SERVER_HOST,
+      port: EMAIL_SERVER_PORT,
+      auth: {
+        user: EMAIL_SERVER_USER,
+        pass: EMAIL_SERVER_PASSWORD,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    };
+
+    const transporter = nodemailer.createTransport(
+      smtpOptions as nodemailer.TransportOptions
+    );
+
+    return transporter.sendMail({
+      from: EMAIL_SERVER_FROM,
+      ...data,
+    });
+  } else {
+    return new Error("EMAIL_SERVER_* not found in .env file!");
+  }
 };
 
 /**
@@ -38,5 +58,9 @@ export const sendEmail = async (data: IEmailPayload) => {
  *    subject: "Example Subject",
  *    html: "<h1>Example EMAIL</h1>",
  *  });
+ *
+ *  if (mailsend instanceof Error) {
+ *    throw mailsend;
+ *  }
  *
  */
