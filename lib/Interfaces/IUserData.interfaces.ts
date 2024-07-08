@@ -5,6 +5,8 @@ export interface IUserDataItem {
 }
 
 export interface IUserData {
+  uuid: string;
+  email: string;
   userData: IUserDataItem[];
   updatedAt?: Date;
   createdAt: Date;
