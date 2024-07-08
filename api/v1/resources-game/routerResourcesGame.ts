@@ -1,5 +1,5 @@
 import express, { Router, Request, Response } from "express";
-import { v4 as uuidv4 } from "uuid";
+import { v4 as uuidv4, validate as uuidValidate } from "uuid";
 import jwt from "jsonwebtoken";
 import * as EmailValidator from "email-validator";
 import { sendEmail } from "@/lib/mailer";
@@ -8,17 +8,123 @@ import {
   mongooseClientDisconnect,
 } from "@/lib/database/mongooseClient";
 import { IMarketData } from "@/lib/Interfaces/IMarketData.interfaces";
+import { IUserData } from "@/lib/Interfaces/IUserData.interfaces";
 
 const routerResourcesGame: Router = express.Router();
 
 // RUFT DIE AKTION AUF DAMIT EINE EMAIL MIT EINEN EINMAL TOKEN GESENDET WIRD
 routerResourcesGame.get(
   "/recovery/:UUID",
-  function (req: Request, res: Response) {
-    res.json({
-      msg: "ok",
-      UUID: req.params.UUID,
-    });
+  async function (req: Request, res: Response) {
+    const { UUID } = req.params;
+
+    // Check if UUID is valid
+    if (!uuidValidate(UUID)) {
+      res.json({
+        msg: "Please provide a valid UUID",
+      });
+      return;
+    }
+
+    let email;
+
+    // Get Email from Database
+    try {
+      const { UserData } = await mongooseClient();
+
+      email = await UserData.findOne({ uuid: UUID }, { email: 1 });
+
+      if (!email) {
+        res.json({
+          msg: "No User Data found for this Recovery Key",
+        });
+        return;
+      }
+
+      const disconnect = await mongooseClientDisconnect();
+    } catch (error) {
+      console.error(
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+          "Timestamp: " +
+          new Date().toString() +
+          "\n\nError Message: " +
+          error +
+          "\n\n\n####  ERROR END  ####\n\n"
+      );
+
+      res.json({
+        msg: "Error by getting data",
+      });
+      return;
+    }
+
+    // Generate Token
+    const Token = uuidv4();
+
+    // Token saved in Database
+    try {
+      const { Token } = await mongooseClient();
+
+      await Token.create({
+        uuid: UUID,
+        token: Token,
+        for: "get",
+        createdAt: new Date(),
+      });
+
+      const disconnect = await mongooseClientDisconnect();
+    } catch (error) {
+      console.error(
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+          "Timestamp: " +
+          new Date().toString() +
+          "\n\nError Message: " +
+          error +
+          "\n\n\n####  ERROR END  ####\n\n"
+      );
+
+      res.json({
+        msg: "Error by saving data",
+      });
+      return;
+    }
+
+    // Send Email with Token
+    try {
+      const mailsend = await sendEmail({
+        to: email,
+        subject: "Dein Token von Resources Game Stats App",
+        html:
+          "<h1>Dein Token um deine Daten wiederherzustellen lautet: </h1><p>" +
+          Token +
+          "</p>",
+      });
+
+      // Check if send email was successful
+      if (mailsend instanceof Error) {
+        throw mailsend;
+      }
+
+      // Return response
+      res.json({
+        msg: "Please continue the recovery process in the email sent to you.",
+      });
+      return;
+    } catch (error) {
+      console.error(
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+          "Timestamp: " +
+          new Date().toString() +
+          "\n\nError Message: " +
+          error +
+          "\n\n\n####  ERROR END  ####\n\n"
+      );
+
+      res.json({
+        msg: "Error by saving data",
+      });
+      return;
+    }
   }
 );
 
@@ -61,7 +167,7 @@ routerResourcesGame.post(
         return;
       }
 
-      const insertUserData = {
+      const insertUserData: IUserData = {
         uuid: userID,
         email: email,
         userData: userData,
