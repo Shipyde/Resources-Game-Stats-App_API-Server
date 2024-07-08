@@ -2,6 +2,7 @@ import express, { Router, Request, Response } from "express";
 import { v4 as uuidv4 } from "uuid";
 import jwt from "jsonwebtoken";
 import * as EmailValidator from "email-validator";
+import { sendEmail } from "@/lib/mailer";
 import {
   mongooseClient,
   mongooseClientDisconnect,
@@ -60,34 +61,17 @@ routerResourcesGame.post(
         return;
       }
 
+      const insertUserData = {
+        uuid: userID,
+        email: email,
+        userData: userData,
+        createdAt: new Date(),
+      };
+
       try {
         const { UserData } = await mongooseClient();
-        const insertUserData = {
-          uuid: userID,
-          email: email,
-          userData: userData,
-          createdAt: new Date(),
-        };
         await UserData.create(insertUserData);
         const disconnect = await mongooseClientDisconnect();
-
-        const { JWT_SECRET_KEY } = process.env;
-
-        if (JWT_SECRET_KEY) {
-          const token = jwt.sign(insertUserData, JWT_SECRET_KEY, {
-            expiresIn: "90d",
-          });
-
-          res.json({
-            YOUR_RECOVERY_KEY: userID,
-            SESSION_TOKEN: token,
-            SESSION_TOKEN_EXPIRES: new Date(
-              Date.now() + 1000 * 60 * 60 * 24 * 90 - 10000
-            ),
-          });
-        } else {
-          throw new Error("JWT_SECRET_KEY not found in .env file");
-        }
       } catch (error) {
         console.error(
           '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
@@ -101,11 +85,76 @@ routerResourcesGame.post(
         res.json({
           msg: "Error by saving data",
         });
+        return;
+      }
+
+      try {
+        const { JWT_SECRET_KEY } = process.env;
+
+        if (JWT_SECRET_KEY) {
+          const token = jwt.sign(insertUserData, JWT_SECRET_KEY, {
+            expiresIn: "90d",
+          });
+
+          // send email with token
+          const mailsend = await sendEmail({
+            to: email,
+            subject: "Dein Recovery Key von Resources Game Stats App",
+            html: "<h1>Dein Recovery Key: </h1><p>" + userID + "</p>",
+          });
+
+          // Check if send email was successful
+          if (mailsend instanceof Error) {
+            throw mailsend;
+          }
+
+          // Return response
+          res.json({
+            YOUR_RECOVERY_KEY: userID,
+            SESSION_TOKEN: token,
+            SESSION_TOKEN_EXPIRES: new Date(
+              Date.now() + 1000 * 60 * 60 * 24 * 90 - 10000
+            ),
+          });
+          return;
+        } else {
+          throw new Error("JWT_SECRET_KEY not found in .env file!");
+        }
+      } catch (error) {
+        console.error(
+          '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+            "Timestamp: " +
+            new Date().toString() +
+            "\n\nError Message: " +
+            error +
+            "\n\n\n####  ERROR END  ####\n\n"
+        );
+
+        try {
+          const { UserData } = await mongooseClient();
+          await UserData.deleteOne({ uuid: userID });
+          const disconnect = await mongooseClientDisconnect();
+        } catch (error2) {
+          console.error(
+            '\n\n####  ERROR (Manual intervention necessary) ####\n#  -> /v1/resource_game/routerResourceGame.ts - "/recovery"  # \n\n\n' +
+              "Timestamp: " +
+              new Date().toString() +
+              "\n\nError Message: " +
+              error +
+              "\n\n\n####  ERROR END  ####\n\n"
+          );
+        }
+
+        res.json({
+          msg: "Error by saving data",
+        });
+        return;
       }
     } else {
       res.json({
         msg: "Please provide email and userdata",
       });
+      return;
     }
   }
 );
@@ -152,17 +201,19 @@ routerResourcesGame.get("/data", async function (req: Request, res: Response) {
 
       await MarketData.create(insertMarketData);
       data = insertMarketData;
-      // Return data
     }
 
     const disconnect = await mongooseClientDisconnect();
 
+    // Return data
     if (!data) {
       res.json({
         msg: "No market data found",
       });
+      return;
     } else {
       res.json(data);
+      return;
     }
   } catch (error) {
     console.error(
@@ -177,6 +228,7 @@ routerResourcesGame.get("/data", async function (req: Request, res: Response) {
     res.json({
       msg: "Error by getting market data",
     });
+    return;
   }
 });
 
