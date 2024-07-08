@@ -15,12 +15,12 @@ export const TokenSchema = new Schema(
       required: true,
     },
     usedAt: Date,
-    createAt: {
+    createdAt: {
       type: Date,
       required: true,
     },
   },
-  { _id: true }
+  { _id: true, versionKey: false }
 );
 
 export default TokenSchema;
