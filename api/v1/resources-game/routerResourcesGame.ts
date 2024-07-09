@@ -53,13 +53,13 @@ routerResourcesGame.get(
       );
 
       res.json({
-        msg: "Error by getting data",
+        msg: "Error by getting the email data from recovery key",
       });
       return;
     }
 
     // Generate Token
-    const Token = uuidv4();
+    const TokenUUID = uuidv4();
 
     // Token saved in Database
     try {
@@ -67,7 +67,7 @@ routerResourcesGame.get(
 
       await Token.create({
         uuid: UUID,
-        token: Token,
+        token: TokenUUID,
         for: "get",
         createdAt: new Date(),
       });
@@ -84,7 +84,7 @@ routerResourcesGame.get(
       );
 
       res.json({
-        msg: "Error by saving data",
+        msg: "Error by saving token in database",
       });
       return;
     }
@@ -96,7 +96,7 @@ routerResourcesGame.get(
         subject: "Dein Token von Resources Game Stats App",
         html:
           "<h1>Dein Token um deine Daten wiederherzustellen lautet: </h1><p>" +
-          Token +
+          TokenUUID +
           "</p>",
       });
 
@@ -121,7 +121,7 @@ routerResourcesGame.get(
       );
 
       res.json({
-        msg: "Error by saving data",
+        msg: "Error by sending email with token",
       });
       return;
     }
