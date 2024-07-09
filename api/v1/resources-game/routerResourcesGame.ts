@@ -154,6 +154,90 @@ routerResourcesGame.get(
   }
 );
 
+// RUFT DIE AKTION AUF UM USERDATEN ZU VERÄNDERN
+routerResourcesGame.put(
+  "/recovery",
+  async function (req: Request, res: Response) {
+    const { email, userData } = req.body;
+    const JWT_SECRET_KEY = process.env.JWT_SECRET_KEY;
+
+    // Check the Validation of the JWT Token
+    if (!req.headers.authorization) {
+      res.json({
+        msg: "Please provide a valid JWT Token",
+      });
+      return;
+    }
+
+    if (!JWT_SECRET_KEY) {
+      console.error(
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+          "Timestamp: " +
+          new Date().toString() +
+          "\n\nError Message: JWT_SECRET_KEY not found in .env file!" +
+          "\n\n\n####  ERROR END  ####\n\n"
+      );
+
+      res.json({
+        msg: "Error by updating the data",
+      });
+      return;
+    }
+
+    const decoded = jwt.verify(req.headers.authorization, JWT_SECRET_KEY);
+
+    if (email && userData) {
+      if (!EmailValidator.validate(email)) {
+        res.json({
+          msg: "Please provide a valid email address",
+        });
+        return;
+      }
+
+      try {
+        const { UserData } = await mongooseClient();
+
+        if (decoded && typeof decoded === "object" && "uuid" in decoded) {
+          await UserData.updateOne(
+            { uuid: decoded.uuid },
+            { email: email, userData: userData, updatedAt: new Date() }
+          );
+
+          const disconnect = await mongooseClientDisconnect();
+
+          res.json({
+            msg: "Data successfully updated",
+          });
+        } else {
+          res.json({
+            msg: "Please provide a valid JWT Token",
+          });
+          return;
+        }
+      } catch (error) {
+        console.error(
+          '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+            "Timestamp: " +
+            new Date().toString() +
+            "\n\nError Message: " +
+            error +
+            "\n\n\n####  ERROR END  ####\n\n"
+        );
+
+        res.json({
+          msg: "Error by updating the data",
+        });
+        return;
+      }
+    } else {
+      res.json({
+        msg: "Please provide email or userdata to updated",
+      });
+      return;
+    }
+  }
+);
+
 // RUF DIE AKTION AUF DAMIT EINE EMAIL MIT EINEM EINMAL TOKEN ZUM
 // LÖSCHEN DER HINTERLEGTEN DATENSÄTZE GESENDET WIRD
 routerResourcesGame.delete(
