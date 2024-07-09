@@ -9,6 +9,7 @@ import {
 } from "@/lib/database/mongooseClient";
 import { IMarketData } from "@/lib/Interfaces/IMarketData.interfaces";
 import { IUserData } from "@/lib/Interfaces/IUserData.interfaces";
+import { IToken } from "@/lib/Interfaces/IToken.interfaces";
 
 const routerResourcesGame: Router = express.Router();
 
@@ -44,7 +45,7 @@ routerResourcesGame.get(
       const disconnect = await mongooseClientDisconnect();
     } catch (error) {
       console.error(
-        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery/:UUID" #### \n\n\n' +
           "Timestamp: " +
           new Date().toString() +
           "\n\nError Message: " +
@@ -85,7 +86,7 @@ routerResourcesGame.get(
       const disconnect = await mongooseClientDisconnect();
     } catch (error) {
       console.error(
-        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery/:UUID" #### \n\n\n' +
           "Timestamp: " +
           new Date().toString() +
           "\n\nError Message: " +
@@ -122,7 +123,7 @@ routerResourcesGame.get(
       return;
     } catch (error) {
       console.error(
-        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery/:UUID" #### \n\n\n' +
           "Timestamp: " +
           new Date().toString() +
           "\n\nError Message: " +
@@ -136,7 +137,7 @@ routerResourcesGame.get(
         const disconnect = await mongooseClientDisconnect();
       } catch (error2) {
         console.error(
-          '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+          '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery/:UUID" #### \n\n\n' +
             "Timestamp: " +
             new Date().toString() +
             "\n\nError Message: " +
@@ -186,7 +187,7 @@ routerResourcesGame.delete(
       const disconnect = await mongooseClientDisconnect();
     } catch (error) {
       console.error(
-        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery/:UUID" #### \n\n\n' +
           "Timestamp: " +
           new Date().toString() +
           "\n\nError Message: " +
@@ -227,7 +228,7 @@ routerResourcesGame.delete(
       const disconnect = await mongooseClientDisconnect();
     } catch (error) {
       console.error(
-        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery/:UUID" #### \n\n\n' +
           "Timestamp: " +
           new Date().toString() +
           "\n\nError Message: " +
@@ -264,7 +265,7 @@ routerResourcesGame.delete(
       return;
     } catch (error) {
       console.error(
-        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery/:UUID" #### \n\n\n' +
           "Timestamp: " +
           new Date().toString() +
           "\n\nError Message: " +
@@ -278,7 +279,7 @@ routerResourcesGame.delete(
         const disconnect = await mongooseClientDisconnect();
       } catch (error2) {
         console.error(
-          '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+          '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery/:UUID" #### \n\n\n' +
             "Timestamp: " +
             new Date().toString() +
             "\n\nError Message: " +
@@ -299,12 +300,149 @@ routerResourcesGame.delete(
 // ODER BESTÄTIGT DAS LÖSCHEN EINES GESPEICHERTEN DATENSATZES
 routerResourcesGame.get(
   "/recovery/:UUID/:TOKEN",
-  function (req: Request, res: Response) {
-    res.json({
-      msg: "ok",
-      UUID: req.params.UUID,
-      TOKEN: req.params.TOKEN,
-    });
+  async function (req: Request, res: Response) {
+    const { UUID, TOKEN } = req.params;
+
+    // Check if UUID is valid
+    if (!uuidValidate(UUID)) {
+      res.json({
+        msg: "Please provide a valid Recovery Key",
+      });
+      return;
+    }
+
+    // Check if TOKEN is valid
+    if (!uuidValidate(TOKEN)) {
+      res.json({
+        msg: "Please provide a valid Token",
+      });
+      return;
+    }
+
+    let getToken: IToken | null = null;
+
+    // Check if TOKEN is valid and not used in Database
+    try {
+      const { Token } = await mongooseClient();
+
+      getToken = await Token.findOne({
+        uuid: UUID,
+        token: TOKEN,
+        usedAt: { $exists: false },
+      });
+
+      if (!getToken) {
+        res.json({
+          msg: "No valid Token found",
+        });
+        return;
+      } else {
+        await Token.updateOne(
+          { uuid: UUID, token: TOKEN },
+          { usedAt: new Date() }
+        );
+      }
+
+      const disconnect = await mongooseClientDisconnect();
+    } catch (error) {
+      console.error(
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery:UUID/:TOKEN" #### \n\n\n' +
+          "Timestamp: " +
+          new Date().toString() +
+          "\n\nError Message: " +
+          error +
+          "\n\n\n####  ERROR END  ####\n\n"
+      );
+
+      res.json({
+        msg: "Error by checking the token",
+      });
+      return;
+    }
+
+    if (getToken.for === "get") {
+      // Get Data from Database
+      try {
+        const { UserData } = await mongooseClient();
+
+        const data: IUserData | null = await UserData.findOne(
+          { uuid: UUID },
+          { _id: 0 }
+        );
+
+        const disconnect = await mongooseClientDisconnect();
+
+        // JWT Token
+        const { JWT_SECRET_KEY } = process.env;
+        if (JWT_SECRET_KEY) {
+          if (data) {
+            res.json({
+              YOUR_RECOVERY_KEY: UUID,
+              SESSION_TOKEN: jwt.sign(
+                JSON.parse(JSON.stringify(data)),
+                JWT_SECRET_KEY,
+                {
+                  expiresIn: "90d",
+                }
+              ),
+              SESSION_TOKEN_EXPIRES: new Date(
+                Date.now() + 1000 * 60 * 60 * 24 * 90 - 10000
+              ),
+            });
+            return;
+          } else {
+            res.json({
+              msg: "No User Data found for this Recovery Key",
+            });
+            return;
+          }
+        } else {
+          throw new Error("JWT_SECRET_KEY not found in .env file!");
+        }
+      } catch (error) {
+        console.error(
+          '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery/:UUID/:TOKEN" #### \n\n\n' +
+            "Timestamp: " +
+            new Date().toString() +
+            "\n\nError Message: " +
+            error +
+            "\n\n\n####  ERROR END  ####\n\n"
+        );
+
+        res.json({
+          msg: "Error by getting the data",
+        });
+        return;
+      }
+    } else {
+      // Delete Data from Database
+      try {
+        const { UserData } = await mongooseClient();
+
+        await UserData.deleteOne({ uuid: UUID });
+
+        const disconnect = await mongooseClientDisconnect();
+      } catch (error) {
+        console.error(
+          '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery/:UUID/:TOKEN" #### \n\n\n' +
+            "Timestamp: " +
+            new Date().toString() +
+            "\n\nError Message: " +
+            error +
+            "\n\n\n####  ERROR END  ####\n\n"
+        );
+
+        res.json({
+          msg: "Error by deleting the data",
+        });
+        return;
+      }
+
+      res.json({
+        msg: "Recovery Data deleted",
+      });
+      return;
+    }
   }
 );
 
