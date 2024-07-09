@@ -157,10 +157,141 @@ routerResourcesGame.get(
 // LÖSCHEN DER HINTERLEGTEN DATENSÄTZE GESENDET WIRD
 routerResourcesGame.delete(
   "/recovery/:UUID/",
-  function (req: Request, res: Response) {
-    res.json({
-      msg: "Please continue the deletion process in the email sent to you.",
-    });
+  async function (req: Request, res: Response) {
+    const { UUID } = req.params;
+
+    // Check if UUID is valid
+    if (!uuidValidate(UUID)) {
+      res.json({
+        msg: "Please provide a valid UUID",
+      });
+      return;
+    }
+
+    let email;
+
+    // Get Email from Database
+    try {
+      const { UserData } = await mongooseClient();
+
+      email = await UserData.findOne({ uuid: UUID }, { email: 1 });
+
+      if (!email) {
+        res.json({
+          msg: "No User Data found for this Recovery Key",
+        });
+        return;
+      }
+
+      const disconnect = await mongooseClientDisconnect();
+    } catch (error) {
+      console.error(
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+          "Timestamp: " +
+          new Date().toString() +
+          "\n\nError Message: " +
+          error +
+          "\n\n\n####  ERROR END  ####\n\n"
+      );
+
+      res.json({
+        msg: "Error by getting the email data from recovery key",
+      });
+      return;
+    }
+
+    // Generate Token
+    let TokenUUID = uuidv4();
+
+    // Token saved in Database
+    try {
+      const { Token } = await mongooseClient();
+
+      const getToken = await Token.findOne({
+        uuid: UUID,
+        for: "delete",
+        usedAt: { $exists: false },
+      });
+
+      if (!getToken) {
+        await Token.create({
+          uuid: UUID,
+          token: TokenUUID,
+          for: "delete",
+          createdAt: new Date(),
+        });
+      } else {
+        TokenUUID = await getToken.token;
+      }
+
+      const disconnect = await mongooseClientDisconnect();
+    } catch (error) {
+      console.error(
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+          "Timestamp: " +
+          new Date().toString() +
+          "\n\nError Message: " +
+          error +
+          "\n\n\n####  ERROR END  ####\n\n"
+      );
+
+      res.json({
+        msg: "Error by saving token in database",
+      });
+      return;
+    }
+
+    // Send Email with Token
+    try {
+      const mailsend = await sendEmail({
+        to: email,
+        subject: "Deine Löschanfrage von Resources Game Stats App",
+        html:
+          "<h1>Dein Token um deine Daten zu Löschen lautet: </h1><p>" +
+          TokenUUID +
+          "</p><br><br><p>ACHTUNG: DIESE AKTION KANN NICHT RÜCKGÄNGIG GEMACHT WERDEN, WENN DU DIESEN BESTÄTIGUNGSTOKEN EINGIBST!</p>",
+      });
+
+      // Check if send email was successful
+      if (mailsend instanceof Error) {
+        throw mailsend;
+      }
+
+      // Return response
+      res.json({
+        msg: "Please continue the delete process in the email sent to you.",
+      });
+      return;
+    } catch (error) {
+      console.error(
+        '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+          "Timestamp: " +
+          new Date().toString() +
+          "\n\nError Message: " +
+          error +
+          "\n\n\n####  ERROR END  ####\n\n"
+      );
+
+      try {
+        const { Token } = await mongooseClient();
+        await Token.deleteOne({ token: TokenUUID });
+        const disconnect = await mongooseClientDisconnect();
+      } catch (error2) {
+        console.error(
+          '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+            "Timestamp: " +
+            new Date().toString() +
+            "\n\nError Message: " +
+            error2 +
+            "\n\n\n####  ERROR END  ####\n\n"
+        );
+      }
+
+      res.json({
+        msg: "Error by sending email with token",
+      });
+      return;
+    }
   }
 );
 
