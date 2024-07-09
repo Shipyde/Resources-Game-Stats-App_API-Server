@@ -59,18 +59,28 @@ routerResourcesGame.get(
     }
 
     // Generate Token
-    const TokenUUID = uuidv4();
+    let TokenUUID = uuidv4();
 
     // Token saved in Database
     try {
       const { Token } = await mongooseClient();
 
-      await Token.create({
+      const getToken = await Token.findOne({
         uuid: UUID,
-        token: TokenUUID,
         for: "get",
-        createdAt: new Date(),
+        usedAt: { $exists: false },
       });
+
+      if (!getToken) {
+        await Token.create({
+          uuid: UUID,
+          token: TokenUUID,
+          for: "get",
+          createdAt: new Date(),
+        });
+      } else {
+        TokenUUID = await getToken.token;
+      }
 
       const disconnect = await mongooseClientDisconnect();
     } catch (error) {
