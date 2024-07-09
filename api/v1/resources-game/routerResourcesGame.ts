@@ -130,6 +130,21 @@ routerResourcesGame.get(
           "\n\n\n####  ERROR END  ####\n\n"
       );
 
+      try {
+        const { Token } = await mongooseClient();
+        await Token.deleteOne({ token: TokenUUID });
+        const disconnect = await mongooseClientDisconnect();
+      } catch (error2) {
+        console.error(
+          '\n\n####  ERROR -> /v1/resource_game/routerResourceGame.ts - "/recovery" #### \n\n\n' +
+            "Timestamp: " +
+            new Date().toString() +
+            "\n\nError Message: " +
+            error2 +
+            "\n\n\n####  ERROR END  ####\n\n"
+        );
+      }
+
       res.json({
         msg: "Error by sending email with token",
       });
@@ -256,7 +271,7 @@ routerResourcesGame.post(
               "Timestamp: " +
               new Date().toString() +
               "\n\nError Message: " +
-              error +
+              error2 +
               "\n\n\n####  ERROR END  ####\n\n"
           );
         }
