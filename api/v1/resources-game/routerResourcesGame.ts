@@ -695,7 +695,7 @@ routerResourcesGame.get("/data", async function (req: Request, res: Response) {
       const scrapData:
         | { status: number; message: string; data: IMarketDataItem[] }
         | Error = await executePython(
-        "lib/python/getResourcesGameMarketData.py"
+        "lib/python/getResourcesGameMarketDataByResources-Game-Stats.py"
       );
 
       if (scrapData instanceof Error) {
