@@ -23,6 +23,10 @@ export const MarktDataSchema = new Schema(
         _id: false,
       },
     ],
+    from: {
+      type: String,
+      required: true,
+    },
     createdAt: {
       type: Date,
       required: true,

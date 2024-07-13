@@ -6,6 +6,7 @@ export interface IMarketDataItem {
 }
 
 export interface IMarketData {
+  from: string;
   marketData: IMarketDataItem[];
   createdAt: Date;
 }

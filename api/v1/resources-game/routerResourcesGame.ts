@@ -1,17 +1,49 @@
 import express, { Router, Request, Response } from "express";
 import { v4 as uuidv4, validate as uuidValidate } from "uuid";
 import jwt from "jsonwebtoken";
+import * as child_process from "child_process";
 import * as EmailValidator from "email-validator";
 import { sendEmail } from "@/lib/mailer";
 import {
   mongooseClient,
   mongooseClientDisconnect,
 } from "@/lib/database/mongooseClient";
-import { IMarketData } from "@/lib/Interfaces/IMarketData.interfaces";
+import {
+  IMarketData,
+  IMarketDataItem,
+} from "@/lib/Interfaces/IMarketData.interfaces";
 import { IUserData } from "@/lib/Interfaces/IUserData.interfaces";
 import { IToken } from "@/lib/Interfaces/IToken.interfaces";
 
 const routerResourcesGame: Router = express.Router();
+
+const executePython = async (script: string) => {
+  const py = child_process.spawn("python3.12", [script]);
+
+  const result:
+    | { status: number; message: string; data: IMarketDataItem[] }
+    | Error = await new Promise((resolve, reject) => {
+    let output: any;
+
+    // Get output from python script
+    py.stdout.on("data", (data) => {
+      output = JSON.parse(data);
+    });
+
+    // Handle erros
+    py.stderr.on("data", (data) => {
+      console.error(`[python] Error occured: ${data}`);
+      reject(`Python Error occured in ${script}`);
+    });
+
+    py.on("exit", (code) => {
+      console.log(`Child process exited with code ${code}`);
+      resolve(output);
+    });
+  });
+
+  return result;
+};
 
 // RUFT DIE AKTION AUF DAMIT EINE EMAIL MIT EINEN EINMAL TOKEN GESENDET WIRD
 routerResourcesGame.get(
@@ -652,50 +684,117 @@ routerResourcesGame.get("/data", async function (req: Request, res: Response) {
       .sort({ createdAt: -1 })
       .then((feedback) => feedback);
 
-    if (!data || data.createdAt < new Date().getTime() - 1000 * 60 * 5) {
-      // Get data from API
-      const response = await fetch(
-        "https://resources-game.ch/resapi/?q=1006&f=1&k=" +
-          process.env.API_RESOURCES_TOKEN +
-          "&l=en&d=30"
-      );
-
+    if (!data || data.createdAt < new Date().getTime() - 1000 * 60 * 3) {
       // Save data to database
-      const ResourcesData = await response.json();
       let insertMarketData: IMarketData = {
+        from: "",
         marketData: [],
         createdAt: new Date(),
       };
 
-      ResourcesData.map(
-        (item: {
-          itemID: number;
-          itemName: string;
-          KIprice: number;
-          price: number;
-          unixts: number;
-        }) =>
-          insertMarketData.marketData.push({
-            itemID: item.itemID,
-            KIprice: item.KIprice,
-            price: item.price,
-            unixts: item.unixts,
-          })
-      );
+      if (data) {
+        let file: string = "";
 
-      await MarketData.create(insertMarketData);
-      data = insertMarketData;
+        if (data.from === "kentasso.ru" || data.from === "resources-game.ch") {
+          // Get data from Python script -> resources-game-stats.de
+          file =
+            "lib/python/getResourcesGameMarketDataByResources-Game-Stats.py";
+          insertMarketData.from = "resources-game-stats.de";
+        } else if (data.from === "resources-game-stats.de") {
+          // Get data from Python script -> kentasso.ru
+          file = "lib/python/getResourcesGameMarketDataByKentasso.py";
+          insertMarketData.from = "kentasso.ru";
+        }
+
+        // Get data from Python script -> resources-game-stats.de
+        const scrapData:
+          | { status: number; message: string; data: IMarketDataItem[] }
+          | Error = await executePython(file);
+
+        if (scrapData instanceof Error) {
+          throw scrapData;
+        }
+
+        if (scrapData.status != 200) {
+          // Get data from API
+          const response = await fetch(
+            "https://resources-game.ch/resapi/?q=1006&f=1&k=" +
+              process.env.API_RESOURCES_TOKEN +
+              "&l=en&d=30"
+          );
+
+          const ResourcesData = await response.json();
+
+          ResourcesData.map(
+            (item: {
+              itemID: number;
+              itemName: string;
+              KIprice: number;
+              price: number;
+              unixts: number;
+            }) =>
+              insertMarketData.marketData.push({
+                itemID: item.itemID,
+                KIprice: item.KIprice,
+                price: item.price,
+                unixts: item.unixts,
+              })
+          );
+
+          insertMarketData.from = "resources-game.ch";
+        } else {
+          insertMarketData.marketData = scrapData.data;
+        }
+
+        data = insertMarketData;
+        if (data.marketData.length != 0 || !data) {
+          await MarketData.create(insertMarketData);
+        }
+      } else {
+        // Get data from API
+        const response = await fetch(
+          "https://resources-game.ch/resapi/?q=1006&f=1&k=" +
+            process.env.API_RESOURCES_TOKEN +
+            "&l=en&d=30"
+        );
+
+        const ResourcesData = await response.json();
+
+        ResourcesData.map(
+          (item: {
+            itemID: number;
+            itemName: string;
+            KIprice: number;
+            price: number;
+            unixts: number;
+          }) =>
+            insertMarketData.marketData.push({
+              itemID: item.itemID,
+              KIprice: item.KIprice,
+              price: item.price,
+              unixts: item.unixts,
+            })
+        );
+
+        insertMarketData.from = "resources-game.ch";
+
+        data = insertMarketData;
+        if (data.marketData.length != 0 || !data) {
+          await MarketData.create(insertMarketData);
+        }
+      }
     }
 
     const disconnect = await mongooseClientDisconnect();
 
     // Return data
-    if (!data) {
+    if (data.marketData.length === 0 || !data) {
       res.json({
         msg: "No market data found",
       });
       return;
     } else {
+      data.from = undefined;
       res.json(data);
       return;
     }
