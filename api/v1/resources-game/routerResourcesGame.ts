@@ -750,7 +750,6 @@ routerResourcesGame.get("/data", async function (req: Request, res: Response) {
         if (data.marketData.length != 0 || !data) {
           await MarketData.create(insertMarketData);
         }
-        data.from = undefined;
       } else {
         // Get data from API
         const response = await fetch(
@@ -783,7 +782,6 @@ routerResourcesGame.get("/data", async function (req: Request, res: Response) {
         if (data.marketData.length != 0 || !data) {
           await MarketData.create(insertMarketData);
         }
-        data.from = undefined;
       }
     }
 
@@ -796,6 +794,7 @@ routerResourcesGame.get("/data", async function (req: Request, res: Response) {
       });
       return;
     } else {
+      data.from = undefined;
       res.json(data);
       return;
     }
