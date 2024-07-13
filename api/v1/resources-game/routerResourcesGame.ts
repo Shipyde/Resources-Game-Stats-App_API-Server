@@ -684,25 +684,74 @@ routerResourcesGame.get("/data", async function (req: Request, res: Response) {
       .sort({ createdAt: -1 })
       .then((feedback) => feedback);
 
-    if (!data || data.createdAt < new Date().getTime() - 1000 * 60 * 2) {
+    if (!data || data.createdAt < new Date().getTime() - 1000 * 60 * 3) {
       // Save data to database
       let insertMarketData: IMarketData = {
+        from: "",
         marketData: [],
         createdAt: new Date(),
       };
 
-      // Get data from Python script -> resources-game-stats.de
-      const scrapData:
-        | { status: number; message: string; data: IMarketDataItem[] }
-        | Error = await executePython(
-        "lib/python/getResourcesGameMarketDataByResources-Game-Stats.py"
-      );
+      if (data) {
+        let file: string = "";
 
-      if (scrapData instanceof Error) {
-        throw scrapData;
-      }
+        if (data.from === "kentasso.ru" || data.from === "resources-game.ch") {
+          // Get data from Python script -> resources-game-stats.de
+          file =
+            "lib/python/getResourcesGameMarketDataByResources-Game-Stats.py";
+          insertMarketData.from = "resources-game-stats.de";
+        } else if (data.from === "resources-game-stats.de") {
+          // Get data from Python script -> kentasso.ru
+          file = "lib/python/getResourcesGameMarketDataByKentasso.py";
+          insertMarketData.from = "kentasso.ru";
+        }
 
-      if (scrapData.status != 200) {
+        // Get data from Python script -> resources-game-stats.de
+        const scrapData:
+          | { status: number; message: string; data: IMarketDataItem[] }
+          | Error = await executePython(file);
+
+        if (scrapData instanceof Error) {
+          throw scrapData;
+        }
+
+        if (scrapData.status != 200) {
+          // Get data from API
+          const response = await fetch(
+            "https://resources-game.ch/resapi/?q=1006&f=1&k=" +
+              process.env.API_RESOURCES_TOKEN +
+              "&l=en&d=30"
+          );
+
+          const ResourcesData = await response.json();
+
+          ResourcesData.map(
+            (item: {
+              itemID: number;
+              itemName: string;
+              KIprice: number;
+              price: number;
+              unixts: number;
+            }) =>
+              insertMarketData.marketData.push({
+                itemID: item.itemID,
+                KIprice: item.KIprice,
+                price: item.price,
+                unixts: item.unixts,
+              })
+          );
+
+          insertMarketData.from = "resources-game.ch";
+        } else {
+          insertMarketData.marketData = scrapData.data;
+        }
+
+        data = insertMarketData;
+        if (data.marketData.length != 0 || !data) {
+          await MarketData.create(insertMarketData);
+        }
+        data.from = undefined;
+      } else {
         // Get data from API
         const response = await fetch(
           "https://resources-game.ch/resapi/?q=1006&f=1&k=" +
@@ -727,13 +776,14 @@ routerResourcesGame.get("/data", async function (req: Request, res: Response) {
               unixts: item.unixts,
             })
         );
-      } else {
-        insertMarketData.marketData = scrapData.data;
-      }
 
-      data = insertMarketData;
-      if (data.marketData.length != 0 || !data) {
-        await MarketData.create(insertMarketData);
+        insertMarketData.from = "resources-game.ch";
+
+        data = insertMarketData;
+        if (data.marketData.length != 0 || !data) {
+          await MarketData.create(insertMarketData);
+        }
+        data.from = undefined;
       }
     }
 
