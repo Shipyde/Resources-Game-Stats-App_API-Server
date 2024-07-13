@@ -3,6 +3,34 @@ import requests
 import datetime
 import json
 
+def get_42(soup: BeautifulSoup):
+    item_id = 42
+    item_name = 'Riesendiamanten'
+    item_price = 0
+    item_KIprice = 0
+    unixts = datetime.datetime.now().timestamp()
+
+    return {
+        "itemID": item_id,
+        "KIprice": item_KIprice,
+        "price": item_price,
+        "unixts": unixts
+    }
+
+def get_48(soup: BeautifulSoup):
+    item_id = 48
+    item_name = 'Techupgrade 4'
+    item_price = 0
+    item_KIprice = 0
+    unixts = datetime.datetime.now().timestamp()
+
+    return {
+        "itemID": item_id,
+        "KIprice": item_KIprice,
+        "price": item_price,
+        "unixts": unixts
+    }
+
 def get_158(soup: BeautifulSoup):
     item_id = 158
     item_name = 'Nachtschicht'
@@ -299,6 +327,13 @@ def get_resources_game_market_data():
                       "price": price.replace('.', ''),
                       "unixts": datetime.datetime.now().timestamp()
                   }
+              case 'Waffen':
+                  ID87 = {
+                      "itemID": 87,
+                      "KIprice": 0,
+                      "price": price.replace('.', ''),
+                      "unixts": datetime.datetime.now().timestamp()
+                  }
               case 'Lithium':
                   ID92 = {
                       "itemID": 92,
@@ -484,13 +519,15 @@ def get_resources_game_market_data():
                       "unixts": datetime.datetime.now().timestamp()
                   }
 
+      ID42 = get_42(soup)
+      ID48 = get_48(soup)
       ID158 = get_158(soup)
       ID159 = get_159(soup)
       ID160 = get_160(soup)
       ID161 = get_161(soup)
 
       return [
-        ID2, ID3, ID7, ID8, ID10, ID12, ID13, ID14, ID15, ID20, ID22, ID24, ID26, ID28, ID30, ID32, ID34, ID36, ID38, ID40, ID41, ID43, ID44, ID45, ID46, ID49, ID51, ID53, ID55, ID57, ID58, ID60, ID66, ID67, ID70, ID74, ID75, ID77, ID78, ID79, ID81, ID84, ID90, ID92, ID93, ID96, ID98, ID99, ID102, ID103, ID104, ID115, ID117, ID120, ID124, ID158, ID159, ID160, ID161
+        ID2, ID3, ID7, ID8, ID10, ID12, ID13, ID14, ID15, ID20, ID22, ID24, ID26, ID28, ID30, ID32, ID34, ID36, ID38, ID40, ID41, ID42, ID43, ID44, ID45, ID46, ID48, ID49, ID51, ID53, ID55, ID57, ID58, ID60, ID66, ID67, ID70, ID74, ID75, ID77, ID78, ID79, ID81, ID84, ID87, ID90, ID92, ID93, ID96, ID98, ID99, ID102, ID103, ID104, ID115, ID117, ID120, ID124, ID158, ID159, ID160, ID161
       ]
     else:
       return []
