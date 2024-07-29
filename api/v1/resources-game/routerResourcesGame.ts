@@ -17,32 +17,38 @@ import { IToken } from "@/lib/Interfaces/IToken.interfaces";
 
 const routerResourcesGame: Router = express.Router();
 
+const { PYTHON_VERSION } = process.env;
+
 const executePython = async (script: string) => {
-  const py = child_process.spawn("python3.12", [script]);
+  if (PYTHON_VERSION) {
+    const py = child_process.spawn(PYTHON_VERSION, [script]);
 
-  const result:
-    | { status: number; message: string; data: IMarketDataItem[] }
-    | Error = await new Promise((resolve, reject) => {
-    let output: any;
+    const result:
+      | { status: number; message: string; data: IMarketDataItem[] }
+      | Error = await new Promise((resolve, reject) => {
+      let output: any;
 
-    // Get output from python script
-    py.stdout.on("data", (data) => {
-      output = JSON.parse(data);
+      // Get output from python script
+      py.stdout.on("data", (data) => {
+        output = JSON.parse(data);
+      });
+
+      // Handle erros
+      py.stderr.on("data", (data) => {
+        console.error(`[python] Error occured: ${data}`);
+        reject(`Python Error occured in ${script}`);
+      });
+
+      py.on("exit", (code) => {
+        console.log(`Child process exited with code ${code}`);
+        resolve(output);
+      });
     });
 
-    // Handle erros
-    py.stderr.on("data", (data) => {
-      console.error(`[python] Error occured: ${data}`);
-      reject(`Python Error occured in ${script}`);
-    });
-
-    py.on("exit", (code) => {
-      console.log(`Child process exited with code ${code}`);
-      resolve(output);
-    });
-  });
-
-  return result;
+    return result;
+  } else {
+    return new Error("Python Version not found in .env file!");
+  }
 };
 
 // RUFT DIE AKTION AUF DAMIT EINE EMAIL MIT EINEN EINMAL TOKEN GESENDET WIRD
